@@ -63,12 +63,10 @@ pub fn install_chain_spec_builder() -> Result<(), Box<dyn Error>> {
     // Determine the operating system and set the appropriate URL
     let os_info = os_check::get_os_info();
     let url;
-    if os_info.as_str() == "linux" {
-        url = "https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2412/chain-spec-builder";
-    } else if os_info.as_str() == "macos" {
+    if os_info.as_str() == "macos" {
         url = "https://binary.xode.net/chain-spec-builder";
     } else {
-        return Err(format!("Unsupported OS: {}", os_info).into());
+        url = "https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2412/chain-spec-builder";
     }
 
     // Destination file path
@@ -124,13 +122,11 @@ pub fn install_omni_node() -> Result<(), Box<dyn Error>> {
     // Determine the operating system and set the appropriate URL
     let os_info = os_check::get_os_info();
     let url;
-    if os_info.as_str() == "linux" {
-        url = "https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2412/polkadot-omni-node";
-    } else if os_info.as_str() == "macos" {
+    if os_info.as_str() == "macos" {
         url = "https://binary.xode.net/polkadot-omni-node";
     } else {
-        return Err(format!("Unsupported OS: {}", os_info).into());
-}
+        url = "https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2412/polkadot-omni-node";
+    }
 
     // Destination file path
     let destination = Path::new("./binaries/polkadot-omni-node");
@@ -253,7 +249,7 @@ pub fn gen_chain_spec() -> Result<(), Box<dyn Error>>{
         .args(&[
             "create",
             "-t", "development",
-            "--relay-chain", "westend2",
+            "--relay-chain", "westend",
             "--para-id", "1000",
             "--runtime", wasm_source_path.to_str().unwrap(),
             "named-preset", "development"
