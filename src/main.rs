@@ -80,15 +80,15 @@ fn handle_template_options(template_name: &str, matches: &clap::ArgMatches) {
 
     println!("Called template installation");
 
-    match template_name {
-        "minimal" | "parachain" | "solochain" => {
+    // match template_name {
+    //     "minimal" | "parachain" | "solochain" => {
             template::run_template(&args, template_name);
-        }
-        _ => {
-            eprintln!("Invalid template specification provided: {}", template_name);
-            process::exit(1);
-        }
-    }
+    //     }
+    //     _ => {
+    //         eprintln!("Invalid template specification provided: {}", template_name);
+    //         process::exit(1);
+    //     }
+    // }
 }
 
 fn handle_chain_spec_options(chain_spec: &str, matches: &clap::ArgMatches) {

@@ -28,9 +28,7 @@ pub fn check_operating_system()  -> String {
     }
 }
 
-// Function to check if the OS is WSL
 pub fn is_wsl() -> bool {
-    // Check for the presence of the WSL environment variable
     std::path::Path::new("/proc/version").exists() && 
     std::fs::read_to_string("/proc/version").unwrap_or_default().contains("Microsoft")
 }
@@ -40,87 +38,100 @@ pub fn is_wsl() -> bool {
 mod tests {
     use super::*;
     use std::env;
-    use std::fs;
-    use std::path::Path;
 
     // Mocking the behavior of `is_wsl` for different environments
     fn mock_is_wsl() -> bool {
         if cfg!(target_os = "linux") {
-            // Simulate WSL for Linux
             true
         } else if cfg!(target_os = "windows") {
-            // Simulate native Windows (not WSL)
             false
         } else {
-            // For other platforms, return false
             false
         }
     }
 
-    #[cfg(target_os = "macos")]
     #[test]
-    fn test_get_os_info_macos() {
-        // Simulate macOS
-        env::set_var("CARGO_CFG_TARGET_OS", "macos");
-        assert_eq!(get_os_info(), "macos");
+    fn test_get_os_info(){
+        let os = env::consts::OS;
+        match os {
+            "macos" => {
+                assert_eq!(get_os_info(), "macos");
+            },
+            "linux" => {
+                assert_eq!(get_os_info(), "linux");
+            },
+            "windows" => {
+                if mock_is_wsl() {
+                    assert_eq!(get_os_info(), "windows-wsl2");
+                } else {
+                    assert_eq!(get_os_info(), "windows");
+                }
+            },
+            _ => {
+                assert_eq!(get_os_info(), format!("Unknown operating system: {}", os));
+            }
+        }
     }
 
-    #[cfg(target_os = "linux")]
     #[test]
-    fn test_get_os_info_linux() {
-        // Simulate Linux (mocking is_wsl to return true for WSL)
-        env::set_var("CARGO_CFG_TARGET_OS", "linux");
-        assert_eq!(get_os_info(), "linux");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_get_os_info_windows() {
-        // Simulate Windows (mocking is_wsl to return false for native Windows)
-        env::set_var("CARGO_CFG_TARGET_OS", "windows");
-        assert_eq!(get_os_info(), "windows");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_get_os_info_windows_wsl() {
-        // Simulate Windows with WSL (mocking is_wsl to return true)
-        env::set_var("CARGO_CFG_TARGET_OS", "windows");
-        assert_eq!(get_os_info(), "windows-wsl2");
-    }
-
-    #[cfg(target_os = "macos")]
-    #[test]
-    fn test_check_operating_system_macos() {
-        env::set_var("CARGO_CFG_TARGET_OS", "macos");
-        assert_eq!(check_operating_system(), "macos");
-    }
-
-    #[cfg(target_os = "linux")]
-    #[test]
-    fn test_check_operating_system_linux() {
-        env::set_var("CARGO_CFG_TARGET_OS", "linux");
-        assert_eq!(check_operating_system(), "linux");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_check_operating_system_windows() {
-        env::set_var("CARGO_CFG_TARGET_OS", "windows");
-        assert_eq!(check_operating_system(), "windows");
-    }
-
-    #[cfg(target_os = "windows")]
-    #[test]
-    fn test_check_operating_system_windows_wsl() {
-        env::set_var("CARGO_CFG_TARGET_OS", "windows");
-        assert_eq!(check_operating_system(), "windows-wsl2");
+    fn test_check_operating_system(){
+        let os = env::consts::OS;
+        match os {
+            "macos" => {
+                assert_eq!(check_operating_system(), "macos");
+            },
+            "linux" => {
+                assert_eq!(check_operating_system(), "linux");
+            },
+            "windows" => {
+                if mock_is_wsl() {
+                    assert_eq!(check_operating_system(), "windows-wsl2");
+                } else {
+                    assert_eq!(check_operating_system(), "windows");
+                }
+            },
+            _ => {
+                assert_eq!(check_operating_system(), format!("Unknown operating system: {}", os));
+            }
+        }
     }
 
     #[test]
     fn test_is_wsl() {
-        // Mock behavior for testing WSL detection
-        assert_eq!(mock_is_wsl(), true);  // Linux WSL simulation
+        if cfg!(target_os = "linux") {
+            let result = is_wsl();
+            if std::path::Path::new("/proc/version").exists() {
+                let content = std::fs::read_to_string("/proc/version").unwrap_or_default();
+                if content.contains("Microsoft") {
+                    assert!(
+                        result,
+                        "Expected `is_wsl` to return true in a WSL environment on Linux."
+                    );
+                } else {
+                    assert!(
+                        !result,
+                        "Expected `is_wsl` to return false on native Linux."
+                    );
+                }
+            } else {
+                assert!(
+                    !result,
+                    "`is_wsl` should return false when `/proc/version` does not exist."
+                );
+            }
+        } else if cfg!(target_os = "windows") {
+            assert!(
+                !is_wsl(),
+                "`is_wsl` should return false on native Windows."
+            );
+        } else if cfg!(target_os = "macos") {
+            assert!(
+                !is_wsl(),
+                "`is_wsl` should return false on macOS."
+            );
+        } else {
+            panic!("Unsupported environment for testing.");
+        }
     }
 }
 

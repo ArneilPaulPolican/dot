@@ -7,6 +7,7 @@ pub struct RealCommand {
 
 pub fn run(args: &[&str]) {
     println!("Running omni-node...");
+    println!("args: {:?}", args);
 
     let command = RealCommand::new("./binaries/polkadot-omni-node")
         .args(args) 
