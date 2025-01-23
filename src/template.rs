@@ -1,7 +1,7 @@
-use std::process::{Command, ExitStatus};
-use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
+use std::process::Command;
+use std::path::Path;
 use std::error::Error;
+use tempfile::tempdir;
 
 pub fn run_template(args: &[&str], template: &str) -> Result<(), Box<dyn Error>>{
     println!("Running {}...{:?}", template, args);
@@ -22,8 +22,6 @@ pub fn run_template(args: &[&str], template: &str) -> Result<(), Box<dyn Error>>
             .args(&["clone", "--quiet", &format!("https://github.com/paritytech/polkadot-sdk-{}-template.git", template), &destination])
             .status()
             .expect("Failed to clone template");
-    }else {
-        println!("\n✅︎ {}-template directory already exists at {}. -> Entering.\n", template, destination);
     }
 
     println!("Entered directory: {}", destination);
@@ -34,20 +32,6 @@ pub fn run_template(args: &[&str], template: &str) -> Result<(), Box<dyn Error>>
 
     println!("args: {:?}", args);
 
-    // 
-    // let output = Command::new("cargo")
-    //     .args(&["run", "--release", "--", "--dev"])
-    //     .args(args)
-    //     .current_dir(repo_path)
-    //     .output()
-    //     .expect("Failed to run project");
-
-    // println!("{}", String::from_utf8_lossy(&output.stdout));
-
-    // if !output.status.success() {
-    //     eprintln!("Failed to run project");
-    //     return;
-    // }
     let _ = serve_template(args, repo_path);
 
     println!("{} is now running.", template);
@@ -75,16 +59,42 @@ fn serve_template(args: &[&str], repo_path: &Path) -> Result<(), Box<dyn Error>>
 }
 
 
-
+/// =================================================================================================
+/// Test Module
+/// =================================================================================================
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::process::{Command, Stdio};
     use std::path::Path;
     use std::fs;
-    use std::thread;
-    use std::time::Duration;
-    use std::sync::{Arc, Mutex};
+
+    #[test]
+    fn test_serve_template() -> Result<(), Box<dyn Error>> {
+        // Create a temporary directory
+        let temp_dir = tempdir()?;
+        let repo_path = temp_dir.path();
+    
+        // Create a minimal Cargo project in the temporary directory
+        fs::create_dir(repo_path.join("src"))?;
+        fs::write(repo_path.join("Cargo.toml"), r#"
+            [package]
+            name = "test_project"
+            version = "0.1.0"
+            edition = "2018"
+    
+            [dependencies]
+        "#)?;
+        fs::write(repo_path.join("src/main.rs"), r#"
+            fn main() {
+                println!("Hello, world!");
+            }
+        "#)?;
+    
+        // Call the serve_template function
+        serve_template(&["--example-arg"], repo_path)?;
+    
+        Ok(())
+    }
 
     // RUN TEMPLATE TESTS
     #[test]
@@ -106,7 +116,7 @@ mod tests {
     #[test]
     fn test_serve_template_fail_no_directory() {
         // Arrange
-        let args = vec!["--arg1", "value1", "--arg2", "value2"];
+        // let args = vec!["--arg1", "value1", "--arg2", "value2"];
         let template = "mock";
 
         let destination = format!("./templates/{}-template", template);

@@ -1,11 +1,14 @@
 use std::process;
-use clap::{Command};
+use clap::Command;
+use std::error::Error;
+use crate::install::RealCommandRunner;
+use std::path::Path;
 
-mod serve;
-mod template;
-mod install;
-mod os_check;
-// mod test;
+pub mod serve;
+pub mod template;
+pub mod install;
+pub mod chain_specs;
+pub mod os_check;
 
 
 fn main() {
@@ -69,8 +72,36 @@ fn handle_install(matches: &clap::ArgMatches) {
         sub_commands.push(("--chain-spec".to_string(), chain.clone()));
     } else {
         println!("Installing default configuration.");
-        install::install("default");
+        install("default");
     }
+}
+
+pub fn install(_template: &str){
+    let mut results: Vec<(Result<(), Box<dyn Error>>, &str)> = Vec::new();
+    
+    let wasm_source_path =  Path::new("./nodes/asset_hub_westend_runtime.compact.compressed.wasm");
+    let chain_spec_builder_path = Path::new("./binaries/chain-spec-builder");
+    let destination = Path::new("./nodes/asset_hub_westend_runtime.compact.compressed.wasm");
+
+    let real_runner = RealCommandRunner;
+    results.push((install::install_polkadot(&real_runner), "$ Polkadot installation"));
+    results.push((install::install_chain_spec_builder(), "$ Chain spec builder installation"));
+    results.push((install::install_omni_node(), "$ Omni-node installation"));
+    results.push((install::run_download_script(&real_runner, &destination ), "$ Wasm file download script"));
+    results.push((chain_specs::gen_chain_spec(Some(&wasm_source_path), Some(&chain_spec_builder_path)), "$ Chain spec script"));
+
+    println!(" ");
+    println!("===========================================================================");
+    println!(" ");
+    for (result, message) in results {
+        match result {
+            Ok(_) => println!("{} success ✓", message),
+            Err(_e) => println!("{} failed ✗", message),
+        }
+    }
+    println!(" ");
+    println!("===========================================================================");
+    println!(" ");
 }
 
 fn handle_template_options(template_name: &str, matches: &clap::ArgMatches) {
@@ -79,16 +110,7 @@ fn handle_template_options(template_name: &str, matches: &clap::ArgMatches) {
         .unwrap_or_else(|| Vec::new());
 
     println!("Called template installation");
-
-    // match template_name {
-    //     "minimal" | "parachain" | "solochain" => {
-            template::run_template(&args, template_name);
-    //     }
-    //     _ => {
-    //         eprintln!("Invalid template specification provided: {}", template_name);
-    //         process::exit(1);
-    //     }
-    // }
+    let _ = template::run_template(&args, template_name);
 }
 
 fn handle_chain_spec_options(chain_spec: &str, matches: &clap::ArgMatches) {

@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use std::sync::Mutex;
 
 lazy_static! {
-    static ref OS_INFO: Mutex<String> = Mutex::new(check_operating_system());
+    static ref OS_INFO: Mutex<String> = Mutex::new(check_operating_system(env::consts::OS));
 }
 
 pub fn get_os_info() -> String {
@@ -12,8 +12,8 @@ pub fn get_os_info() -> String {
     os_info.clone() // Return a clone of the OS info
 }
 
-pub fn check_operating_system()  -> String {
-    let os = env::consts::OS;
+pub fn check_operating_system(os: &str)  -> String {
+    // let os = env::consts::OS;
     match os {
         "macos" => "macos".to_string(),
         "linux" => "linux".to_string(),
@@ -33,7 +33,13 @@ pub fn is_wsl() -> bool {
     std::fs::read_to_string("/proc/version").unwrap_or_default().contains("Microsoft")
 }
 
+pub fn get_os() -> &'static str {
+    env::consts::OS
+}
 
+/// =================================================================================================
+/// Test Module
+/// =================================================================================================
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -48,6 +54,25 @@ mod tests {
         } else {
             false
         }
+    }
+
+
+    #[test]
+    fn test_check_operating_system_env_macos() {
+        env::set_var("OS", "macos");
+        assert_eq!(check_operating_system("macos"), "macos");
+    }
+
+    #[test]
+    fn test_check_operating_system_env_linux() {
+        env::set_var("OS", "linux");
+        assert_eq!(check_operating_system("linux"), "linux");
+    }
+
+    #[test]
+    fn test_check_operating_system_env_windows() {
+        env::set_var("OS", "windows");
+        assert_eq!(check_operating_system("windows"), "windows");
     }
 
     #[test]
@@ -78,20 +103,20 @@ mod tests {
         let os = env::consts::OS;
         match os {
             "macos" => {
-                assert_eq!(check_operating_system(), "macos");
+                assert_eq!(check_operating_system("macos"), "macos");
             },
             "linux" => {
-                assert_eq!(check_operating_system(), "linux");
+                assert_eq!(check_operating_system("linux"), "linux");
             },
             "windows" => {
                 if mock_is_wsl() {
-                    assert_eq!(check_operating_system(), "windows-wsl2");
+                    assert_eq!(check_operating_system("windows-wsl2"), "windows-wsl2");
                 } else {
-                    assert_eq!(check_operating_system(), "windows");
+                    assert_eq!(check_operating_system("windows"), "windows");
                 }
             },
             _ => {
-                assert_eq!(check_operating_system(), format!("Unknown operating system: {}", os));
+                assert_eq!(check_operating_system(""), format!("Unknown operating system: {}", os));
             }
         }
     }
