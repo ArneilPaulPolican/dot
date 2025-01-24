@@ -1,79 +1,112 @@
 use std::process::{Command, ExitStatus};
-use std::path::Path;
+use std::io;
 
-
-pub fn make_executable(script_path: &Path) -> Result<ExitStatus, String> {
-    Command::new("chmod")
-        .arg("+x")
-        .arg(script_path)
-        .status()
-        .map_err(|e| format!("Failed to make script executable: {}", e))
-}
-
-pub fn run_script(script_path: &Path, args: &[&str]) -> Result<ExitStatus, String> {
-    Command::new("bash")
-        .arg(script_path)
-        .args(args)
-        .status()
-        .map_err(|e| format!("Failed to run script: {}", e))
+pub struct RealCommand {
+    command: Command,
 }
 
 pub fn run(args: &[&str]) {
     println!("Running omni-node...");
+    println!("args: {:?}", args);
 
-    let script_path = Path::new("./script/omni-node.sh");
+    let command = RealCommand::new("./binaries/polkadot-omni-node")
+        .args(args) 
+        .status();
 
-    match make_executable(script_path) {
-        Ok(status) if status.success() => {
-            println!("Script is executable.");
-        }
-        _ => {
-            eprintln!("Failed to make script executable");
-            return;
-        }
-    }
-
-    println!("Running script: {:?}", script_path);
-
-    match run_script(script_path, args) {
+    match command {
         Ok(status) if status.success() => {
             println!("Omni-node is now running.");
         }
-        _ => {
-            eprintln!("Failed to run script at {:?}", script_path);
+        Ok(status) => {
+            eprintln!("Omni-node failed to start with exit status: {}", status);
+        }
+        Err(e) => {
+            eprintln!("Failed to run omni-node: {}", e);
         }
     }
 }
 
-// pub fn run(args: &[&str]) {
-//     println!("Running omni-node...");
+pub trait CommandRunner {
+    fn new(program: &str) -> Self;
+    fn args(&mut self, args: &[&str]) -> &mut Self;
+    fn status(&mut self) -> io::Result<ExitStatus>;
+}
 
-//     // Define the path to the script
-//     let script_path = Path::new("./script/omni-node.sh");
+impl CommandRunner for RealCommand {
+    fn new(program: &str) -> Self {
+        RealCommand {
+            command: Command::new(program),
+        }
+    }
 
-//     // Make the script executable
-//     let chmod_status = Command::new("chmod")
-//         .arg("+x")
-//         .arg(script_path)
-//         .status()
-//         .expect("Failed to make script executable");
+    fn args(&mut self, args: &[&str]) -> &mut Self {
+        self.command.args(args);
+        self
+    }
 
-//     if !chmod_status.success() {
-//         eprintln!("Failed to make script executable");
-//         return;
-//     }
-//     println!("Running script: {:?}", script_path);
+    fn status(&mut self) -> io::Result<ExitStatus> {
+        self.command.status()
+    }
+}
 
-//     let status = Command::new("bash")
-//         .arg(script_path)
-//         .args(args)
-//         .status()
-//         .expect("Failed to run script");
 
-//     if !status.success() {
-//         eprintln!("Failed to run script at {:?}", script_path);
-//         return;
-//     }
+/// =================================================================================================
+/// Test Module
+/// =================================================================================================
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::process::ExitStatus;
+    use std::os::unix::process::ExitStatusExt;
 
-//     println!("Omni-node is now running.");
-// }
+    // Mock Command for testing purposes
+    struct MockCommand {
+        args: Vec<String>,
+        success: bool,
+    }
+
+    impl CommandRunner for MockCommand {
+        fn new(_program: &str) -> Self {
+            MockCommand {
+                args: Vec::new(),
+                success: true,
+            }
+        }
+
+        fn args(&mut self, args: &[&str]) -> &mut Self {
+            self.args.extend(args.iter().map(|&arg| arg.to_string()));
+            self
+        }
+
+        fn status(&mut self) -> io::Result<ExitStatus> {
+            if self.success {
+                Ok(ExitStatus::from_raw(0)) // Mock success
+            } else {
+                Ok(ExitStatus::from_raw(1)) // Mock failure
+            }
+        }
+    }
+
+    #[test]
+    fn test_run_success() {
+        let mut mock_command = MockCommand::new("./mock-path");
+        mock_command.success = true;
+
+        // Call run with mock behavior
+        run(&["--chain", "./mock-specs/mock_chain.json"]);
+
+        // Add assertions as needed
+    }
+
+    #[test]
+    fn test_run_failure() {
+        let mut mock_command = MockCommand::new("./mock-path");
+        mock_command.success = false;
+
+        // Call run with mock behavior
+        run(&["--chain", "./mock-specs/mock_chain.json"]);
+
+        // Add assertions as needed
+    }
+
+}

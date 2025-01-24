@@ -4,10 +4,19 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-clap = "3.0"
+clap = { version = "4.5.20",  features = ["derive"]  }
 pty = "0.2"
 lazy_static = "1.4"
+mockall = "0.11"
+assert_cmd = "2.0"
+tempfile = "3.6"
+mockito = "0.31"
+
 
 [[bin]]
 name = "dot"
 path = "src/main.rs"
+
+[dev-dependencies]
+mockall = "0.11"
+assert_cmd = "2.0"
