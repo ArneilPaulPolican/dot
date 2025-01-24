@@ -64,8 +64,6 @@ pub fn install_polkadot<C: CommandRunner>(_runner: &C) -> Result<(), Box<dyn Err
     Ok(()) 
 }
 
-// test_install_chain_spec_builder_success
-// test_create_binaries_directory - create a temporary directory for binaries/
 pub fn install_chain_spec_builder() -> Result<(), Box<dyn Error>> {
     println!("Installing chain-spec-builder");
 
