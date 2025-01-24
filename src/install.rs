@@ -595,10 +595,10 @@ mod e2e_tests {
         
         // Mock WSL behavior (we simulate WSL here)
         if mock_is_wsl() {
-            let os_info = check_operating_system();
+            let os_info = check_operating_system("windows");
             assert_eq!(os_info, "windows-wsl2");
         } else {
-            let os_info = check_operating_system();
+            let os_info = check_operating_system("windows");
             assert_eq!(os_info, "windows");
         }
     }
@@ -609,7 +609,7 @@ mod e2e_tests {
         env::set_var("CARGO_CFG_TARGET_OS", "macos");
         
         // Check if the OS info returns the correct result
-        let os_info = check_operating_system();
+        let os_info = check_operating_system("macos");
         assert_eq!(os_info, "macos");
     }
 
