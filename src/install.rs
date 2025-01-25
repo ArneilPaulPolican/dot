@@ -73,15 +73,18 @@ pub fn install_chain_spec_builder() -> Result<(), Box<dyn Error>> {
     let os_info = os_check::get_os_info();
     let url;
     if os_info.as_str() == "macos" {
-        url = "https://binary.xode.net/chain-spec-builder";
+        url = "https://github.com/ArneilPaulPolican/dot/releases/download/v0.0.1-binary/chain-spec-builder";
     } else {
         url = "https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2412/chain-spec-builder";
     }
 
     // check and create binaries directory
-    let _ = create_binaries_dir();
     let destination = Path::new("./binaries/chain-spec-builder");
-    let _ = check_binary(destination)?;
+    let _ = create_binaries_dir()?;
+    if destination.exists() {
+        println!("Chain-spec-builder binary is already available.");
+        return Ok(());
+    }
 
     println!("Downloading...");
     let output = Command::new("wget")
@@ -118,7 +121,7 @@ pub fn create_binaries_dir() -> Result<(), Box<dyn Error>> {
     let binaries_dir = Path::new("./binaries");
     if !binaries_dir.exists() {
         println!("'binaries' directory does not exist. Creating it...");
-        if let Err(e) = fs::create_dir_all(binaries_dir) {
+        if let Err(e) = fs::create_dir(binaries_dir) {
             return Err(format!("Failed to create 'binaries' directory: {}", e).into());
         }
     }
@@ -140,9 +143,9 @@ pub fn install_omni_node() -> Result<(), Box<dyn Error>> {
 
     // Determine the operating system and set the appropriate URL
     let os_info = os_check::get_os_info();
-    let url;
+    let url ;
     if os_info.as_str() == "macos" {
-        url = "https://binary.xode.net/polkadot-omni-node";
+        url = "https://github.com/ArneilPaulPolican/dot/releases/download/v0.0.1-binary/polkadot-omni-node";
     } else {
         url = "https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2412/polkadot-omni-node";
     }
@@ -188,41 +191,6 @@ pub fn install_omni_node() -> Result<(), Box<dyn Error>> {
 
 pub fn run_download_script<C: CommandRunner>(runner: &C, destination: &Path) -> Result<(), Box<dyn Error>>{
     let url = "https://github.com/paritytech/polkadot-sdk/releases/download/polkadot-stable2412/asset_hub_westend_runtime.compact.compressed.wasm";
-    
-    // Destination file path
-    // let destination = Path::new("./nodes/asset_hub_westend_runtime.compact.compressed.wasm");
-    // if destination.exists() {
-    //     println!("Wasm file is available");
-    //     return Ok(())
-    // }
-    
-    // // Check if the 'binaries' directory exists, if not, create it
-    // let nodes_dir = Path::new("./nodes");
-    // if !nodes_dir.exists() {
-    //     println!("'nodes' directory does not exist. Creating it...");
-    //     if let Err(e) = fs::create_dir_all(nodes_dir) {
-    //         return Err(format!("Failed to create 'nodes' directory: {}", e).into());
-    //     }
-    // }
-    
-    // let output = Command::new("wget")
-    //     .arg("-O")
-    //     .arg(destination)
-    //     .arg(url)
-    //     .output()
-    //     .map_err(|e| format!("Failed to execute wget: {}", e))?;
-    
-    // // Check if the download was successful
-    // if output.status.success() {
-    //     println!("Download successful: {:?}", destination);
-    //     return Ok(())
-    // } else {
-    //     return Err(format!(
-    //         "Download failed with exit code: {:?}",
-    //         output.status.code()
-    //     ).into());
-    // }
-
 
     if file_exists(destination) {
         println!("Wasm file is available");
@@ -272,7 +240,7 @@ pub fn download_file<C: CommandRunner>(runner: &C, url: &str, destination: &Path
 /// Test Module
 /// =================================================================================================
 #[cfg(test)]
-mod e2e_tests {
+mod tests {
     use tempfile::{tempdir, TempDir};
     use super::*;
     use std::io;

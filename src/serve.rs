@@ -1,4 +1,5 @@
 use std::process::{Command, ExitStatus};
+use std::error::Error;
 use std::io;
 
 pub struct RealCommand {
@@ -22,6 +23,30 @@ pub fn run(args: &[&str]) {
         }
         Err(e) => {
             eprintln!("Failed to run omni-node: {}", e);
+        }
+    }
+}
+
+pub fn run_eth(args: &[&str]) -> Result<(), Box<dyn Error>> {
+    println!("Running eth-rpc...");
+    println!("args: {:?}", args);
+
+    let mut command = RealCommand::new("./binaries/eth-rpc");
+    command.command.env("RUST_LOG", "debug");
+    // command.args(args);
+
+    match command.status() {
+        Ok(status) if status.success() => {
+            println!("Omni-node is now running.");
+            Ok(())
+        }
+        Ok(status) => {
+            eprintln!("Omni-node failed to start with exit status: {}", status);
+            Err(format!("Omni-node failed to start with exit status: {}", status).into())
+        }
+        Err(e) => {
+            eprintln!("Failed to run omni-node: {}", e);
+            Err(format!("Failed to run omni-node: {}", e).into())
         }
     }
 }
