@@ -35,7 +35,7 @@ pub fn run_eth<R: CommandRunner>(runner: &mut R, args: &[&str]) -> Result<(), Bo
     runner.args(args);
     match runner.status() {
         Ok(status) if status.success() => {
-            println!("Eth-roc is now running.");
+            println!("Eth-rpc is now running.");
             Ok(())
         }
         Ok(status) => {
@@ -43,8 +43,8 @@ pub fn run_eth<R: CommandRunner>(runner: &mut R, args: &[&str]) -> Result<(), Bo
             Err(format!("Eth-roc failed to start with exit status: {}", status).into())
         }
         Err(e) => {
-            eprintln!("Failed to run Eth-roc: {}", e);
-            Err(format!("Failed to run Eth-roc: {}", e).into())
+            eprintln!("Failed to run Eth-rpc: {}", e);
+            Err(format!("Failed to run Eth-rpc: {}", e).into())
         }
     }
 }
@@ -193,7 +193,7 @@ mod tests {
         // Call run_eth with failing runner
         let result = run_eth(&mut failing_command, &["--chain", "./mock-specs/mock_chain.json"]);
         assert!(result.is_err());
-        assert_eq!(result.unwrap_err().to_string(), "Failed to run omni-node: Simulated failure");
+        assert_eq!(result.unwrap_err().to_string(), "Failed to run Eth-rpc: Simulated failure");
 
         // Add assertions as needed
     }
