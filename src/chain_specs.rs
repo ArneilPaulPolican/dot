@@ -369,11 +369,11 @@ mod tests {
         let result = move_chain_spec(&source_file_path);
 
         // Assert that the result is Ok
+        dbg!(&result);
         assert!(result.is_ok());
 
         // Assert that the source file no longer exists
         assert!(!source_file_path.exists(), "Source chain_spec.json should not exist after being moved.");
-
     }
 
 
