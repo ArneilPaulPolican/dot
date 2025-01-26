@@ -1,14 +1,19 @@
 use std::process;
 use clap::Command;
+use serve::CommandRunner;
 use std::error::Error;
 use crate::install::RealCommandRunner;
+use crate::serve::RealCommand;
 use std::path::Path;
+use std::thread;
+use eth_rpc::EthRpcInstaller;
 
 pub mod serve;
 pub mod template;
 pub mod install;
 pub mod chain_specs;
 pub mod os_check;
+pub mod eth_rpc;
 
 
 fn main() {
@@ -78,15 +83,22 @@ fn handle_install(matches: &clap::ArgMatches) {
 
 pub fn install(_template: &str){
     let mut results: Vec<(Result<(), Box<dyn Error>>, &str)> = Vec::new();
+    let binaries_dir = "./binaries";
     
     let wasm_source_path =  Path::new("./nodes/asset_hub_westend_runtime.compact.compressed.wasm");
     let chain_spec_builder_path = Path::new("./binaries/chain-spec-builder");
     let destination = Path::new("./nodes/asset_hub_westend_runtime.compact.compressed.wasm");
 
+    let eth_url = "https://github.com/ArneilPaulPolican/dot/releases/download/v0.0.1-binary/eth-rpc";
+    let binary_name = "eth-rpc";
+    let installer = EthRpcInstaller::new(eth_url, binaries_dir, binary_name);
+    let eth_installer_result = installer.install();
+
     let real_runner = RealCommandRunner;
     results.push((install::install_polkadot(&real_runner), "$ Polkadot installation"));
     results.push((install::install_chain_spec_builder(), "$ Chain spec builder installation"));
     results.push((install::install_omni_node(), "$ Omni-node installation"));
+    results.push((eth_installer_result, "$ Eth-rpc installation"));
     results.push((install::run_download_script(&real_runner, &destination ), "$ Wasm file download script"));
     results.push((chain_specs::gen_chain_spec(Some(&wasm_source_path), Some(&chain_spec_builder_path)), "$ Chain spec script"));
 
@@ -110,7 +122,7 @@ fn handle_template_options(template_name: &str, matches: &clap::ArgMatches) {
         .unwrap_or_else(|| Vec::new());
 
     println!("Called template installation");
-    let _ = template::run_template(&args, template_name);
+    let _ = template::run_template(&args, &template_name);
 }
 
 fn handle_chain_spec_options(chain_spec: &str, matches: &clap::ArgMatches) {
@@ -132,14 +144,30 @@ fn handle_chain_spec_options(chain_spec: &str, matches: &clap::ArgMatches) {
 }
 
 fn handle_serve(matches: &clap::ArgMatches) {
-    let mut args: Vec<&str> = matches.get_one::<String>("ARGS").map(|s| s.split_whitespace())
-            .unwrap_or_else(|| "".split_whitespace())
-            .collect(); 
-    if args.is_empty() {
-        args = vec!["--chain", "./chain-specs/chain_spec.json"];
-    }
-    println!("args: {:?}", args);
+    let mut args: Vec<String> = matches.get_one::<String>("ARGS")
+        .map(|s| s.split_whitespace().map(|s| s.to_string()).collect())
+        .unwrap_or_else(|| vec![]);  
 
-    serve::run(&args);
+    if args.is_empty() {
+        args = vec!["--chain".to_string(), "./chain-specs/chain_spec.json".to_string()];
+    }
+
+    println!("Starting omni-node and eth-rpc concurrently...");
+
+    let handle_run = thread::spawn(move || {
+        serve::run(&args.iter().map(|s| s.as_str()).collect::<Vec<&str>>()); // Convert to &str slice
+    });
+
+    let mut real_runner_eth = RealCommand::new("./binaries/eth-rpc");
+    let handle_run_eth = thread::spawn(move || {
+        let eth_args: Vec<&str> = vec![];
+        if let Err(e) = serve::run_eth(&mut real_runner_eth, &eth_args) {
+            eprintln!("Error running eth-rpc: {}", e);
+        }
+    });
+
+    handle_run.join().expect("Failed to join run thread");
+    handle_run_eth.join().expect("Failed to join run_eth thread");
+
     process::exit(0);
 }

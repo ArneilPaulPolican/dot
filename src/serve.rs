@@ -1,4 +1,5 @@
 use std::process::{Command, ExitStatus};
+use std::error::Error;
 use std::io;
 
 pub struct RealCommand {
@@ -22,6 +23,28 @@ pub fn run(args: &[&str]) {
         }
         Err(e) => {
             eprintln!("Failed to run omni-node: {}", e);
+        }
+    }
+}
+
+pub fn run_eth<R: CommandRunner>(runner: &mut R, args: &[&str]) -> Result<(), Box<dyn Error>> {
+    println!("Running eth-rpc...");
+    println!("args: {:?}", args);
+
+    // Pass the arguments to the runner
+    runner.args(args);
+    match runner.status() {
+        Ok(status) if status.success() => {
+            println!("Eth-rpc is now running.");
+            Ok(())
+        }
+        Ok(status) => {
+            eprintln!("Eth-roc failed to start with exit status: {}", status);
+            Err(format!("Eth-roc failed to start with exit status: {}", status).into())
+        }
+        Err(e) => {
+            eprintln!("Failed to run Eth-rpc: {}", e);
+            Err(format!("Failed to run Eth-rpc: {}", e).into())
         }
     }
 }
@@ -63,6 +86,7 @@ mod tests {
     struct MockCommand {
         args: Vec<String>,
         success: bool,
+        fail_to_run: bool,
     }
 
     impl CommandRunner for MockCommand {
@@ -70,6 +94,7 @@ mod tests {
             MockCommand {
                 args: Vec::new(),
                 success: true,
+                fail_to_run: false,
             }
         }
 
@@ -79,7 +104,9 @@ mod tests {
         }
 
         fn status(&mut self) -> io::Result<ExitStatus> {
-            if self.success {
+            if self.fail_to_run {
+                Err(io::Error::new(io::ErrorKind::Other, "Simulated failure"))
+            } else if self.success {
                 Ok(ExitStatus::from_raw(0)) // Mock success
             } else {
                 Ok(ExitStatus::from_raw(1)) // Mock failure
@@ -108,5 +135,66 @@ mod tests {
 
         // Add assertions as needed
     }
+    #[test]
+    fn test_run_fail_to_run() {
+        let mut mock_command = MockCommand::new("./mock-path");
+        mock_command.fail_to_run = true;
 
+        // Call run with mock behavior
+        run(&["--chain", "./mock-specs/mock_chain.json"]);
+
+        // Add assertions as needed
+    }
+
+    #[test]
+    fn test_run_eth_success() {
+        let mut mock_command = MockCommand::new("./mock-path");
+        mock_command.success = true;
+
+        // Call run_eth with mock behavior
+        let result = run_eth(&mut mock_command, &["--chain", "./mock-specs/mock_chain.json"]);
+        assert!(result.is_ok());
+
+        // Add assertions as needed
+    }
+
+    #[test]
+    fn test_run_eth_failure() {
+        let mut mock_command = MockCommand::new("./mock-path");
+        mock_command.success = false;
+
+        // Call run_eth with mock behavior
+        let result = run_eth(&mut mock_command, &["--chain", "./mock-specs/mock_chain.json"]);
+        assert!(result.is_err());
+
+        // Add assertions as needed
+    }
+
+    #[test]
+    fn test_run_eth_runner_failure() {
+        struct FailingCommand;
+
+        impl CommandRunner for FailingCommand {
+            fn new(_program: &str) -> Self {
+                FailingCommand
+            }
+
+            fn args(&mut self, _args: &[&str]) -> &mut Self {
+                self
+            }
+
+            fn status(&mut self) -> io::Result<ExitStatus> {
+                Err(io::Error::new(io::ErrorKind::Other, "Simulated failure"))
+            }
+        }
+
+        let mut failing_command = FailingCommand::new("./mock-path");
+
+        // Call run_eth with failing runner
+        let result = run_eth(&mut failing_command, &["--chain", "./mock-specs/mock_chain.json"]);
+        assert!(result.is_err());
+        assert_eq!(result.unwrap_err().to_string(), "Failed to run Eth-rpc: Simulated failure");
+
+        // Add assertions as needed
+    }
 }

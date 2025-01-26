@@ -2,6 +2,8 @@ use std::process::Command;
 use std::path::Path;
 use std::error::Error;
 use tempfile::tempdir;
+use mockall::predicate::*;
+use mockall::*;
 
 pub fn run_template(args: &[&str], template: &str) -> Result<(), Box<dyn Error>>{
     println!("Running {}...{:?}", template, args);
@@ -67,6 +69,32 @@ mod tests {
     use super::*;
     use std::path::Path;
     use std::fs;
+    use std::io;
+    use mockall::predicate::eq;
+
+    // RUN TEMPLATE TESTS
+    #[test]
+    fn test_run_template_fail_template_not_recognize() {
+        // Arrange
+        let args = vec!["--arg1", "value1"];
+        let template = "unknown_template"; // Use an unrecognized template
+
+        // Act: Run the function you are testing
+        let result = run_template(&args, template);
+
+        // Assert: Check that the result is an error
+        assert!(result.is_err(), "Expected run_template to return an error for unrecognized template");
+        assert_eq!(result.unwrap_err().to_string(), format!("Template unrecognized: {}", template));
+    
+    }
+
+    #[test]
+    fn test_run_template_with_invalid_template() {
+        let template = "invalid-template";
+        let result = run_template(&[], template);
+        assert!(result.is_err());
+    }
+
 
     #[test]
     fn test_serve_template() -> Result<(), Box<dyn Error>> {
@@ -96,21 +124,6 @@ mod tests {
         Ok(())
     }
 
-    // RUN TEMPLATE TESTS
-    #[test]
-    fn test_run_template_fail_template_not_recognize() {
-        // Arrange
-        let args = vec!["--arg1", "value1"];
-        let template = "unknown_template"; // Use an unrecognized template
-
-        // Act: Run the function you are testing
-        let result = run_template(&args, template);
-
-        // Assert: Check that the result is an error
-        assert!(result.is_err(), "Expected run_template to return an error for unrecognized template");
-        assert_eq!(result.unwrap_err().to_string(), format!("Template unrecognized: {}", template));
-    
-    }
     
     // SERVE TEMPLATE TESTS
     #[test]
